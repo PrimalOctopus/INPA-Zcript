@@ -1,0 +1,364 @@
+//**********************************************************************
+//*
+//* Test script for INPA
+//*
+//**********************************************************************
+
+#pragma winedit
+
+#include "inpa.h"
+#include "BMW_STD.H"
+
+//**********************************************************************
+//* Vars
+//**********************************************************************
+
+string TITLE = "N42 INPA ZCRIPT";
+string CONTROLUNIT = "ME9K42";
+string LOGNAME = "n42";
+
+string LOGSTRING = "";
+string LOGFORMAT = "";
+
+//**********************************************************************
+//* Function Definition
+//**********************************************************************
+//this is hacky, and lossy
+LongToInt(in: long value, out: int output) {
+  long struct;
+  int ibuffer;
+
+  ibuffer = 10;
+
+  CreateStructure(struct,4);
+  SetStructureMode(0);
+  StructureLong(struct, 0, value);
+
+  SetStructureMode(1);
+  StructureInt(struct, 0, ibuffer);
+
+  output = ibuffer;
+}
+
+LongToString(in: long value, out: string output) {
+  string working, s;
+  int i;
+  long rl;
+  bool flipped;
+
+  working = "";
+  
+  if (value < 1)
+  {
+    value = -value;
+    flipped = TRUE;
+  }
+
+  while (value > 9) {
+    rl = value / 10;
+    rl = value - (rl * 10);
+    value = (value -rl) / 10;
+    LongToInt(rl, i);
+    inttostring(i, s);
+    working = s + working;
+  }
+  LongToInt(value, i);
+  inttostring(i, s);
+  working = s + working;
+
+  if (flipped)
+    working = "-" + working;
+
+  output = working;
+}
+
+//Get datetime string "DD.MM.YY_HH.MM.SS"
+GetDateTime(out: string output) {
+  string time, date, s, dateTime;
+
+  gettime(time);
+  getdate(date);
+
+  dateTime = "";
+
+  midstr(s, date, 0, 2);
+  dateTime = s + ".";
+  midstr(s, date, 3, 2);
+  dateTime = dateTime + s + ".";
+  midstr(s, date, 6, 2);
+  dateTime = dateTime + s + "_";
+
+  midstr(s, time, 0, 2);
+  dateTime = dateTime + s + ".";
+  midstr(s, time, 3, 2);
+  dateTime = dateTime + s + ".";
+  midstr(s, time, 6, 2);
+  output = dateTime + s;
+}
+
+//Open LogFile in LOGS, append datetime to avoid overwriting logs, first LINE contains LOGFORMAT string
+LogOpen(in: string file) {
+  string dateTime;
+
+  callwin("cmd.exe /c /q mkdir LOGS");                      //Prevent crash if LOGS folder does not exist
+  delay(100);                                               //Wait to make sure windows is finished, we do not want a race condition
+
+  GetDateTime(dateTime);
+
+  fileopen("LOGS/" + file + " " + dateTime + ".log", "w");
+  filewrite(LOGFORMAT);                                     //Write LOGFORMAT to first LINE
+}
+
+//Write LOGSTRING to file with leading timestamp, reset LOGSTRING
+LogWrite() {
+  string time;
+  if (LOGSTRING != "") {
+    gettime(time);
+    filewrite(time + "," + LOGSTRING);
+    LOGSTRING = "";
+  }
+}
+
+//Log a string value
+LogString(in: string value) {
+  LOGSTRING = LOGSTRING + value + ",";
+}
+
+//Log a real value
+LogReal(in: real value) {
+  string s;
+  realtostring(value, "", s);
+  LOGSTRING = LOGSTRING + s + ",";
+}
+
+//Log a real value
+LogRealP(in: real value, in: string label, in: int row) {
+  string s;
+  realtostring(value, "", s);
+  LOGSTRING = LOGSTRING + s + ",";
+
+  text(row, 0, label + s);
+}
+
+//Log an int value
+LogInt(in: int value) {
+  string s;
+  inttostring(value, s);
+  LOGSTRING = LOGSTRING + s + ",";
+}
+
+//Log a boolean value
+LogBool(in: bool value) {
+  if (value)
+    LOGSTRING = LOGSTRING + "1,";
+  else
+    LOGSTRING = LOGSTRING + "0,";
+}
+
+//Log a byte value 0-F
+LogByte(in: byte value) {
+  string s;
+  int i;
+
+  bytetoint(value, i);
+  inttostring(i, s);
+  
+  LOGSTRING = LOGSTRING + s + ",";
+}
+
+LogLong(in: long value) {
+  string s;
+
+  LongToString(value, s);
+
+  LOGSTRING = LOGSTRING + s + ",";
+}
+
+ECUINIT() {
+  bool errorFlag;
+  int queryInt;
+  INPAapiJob(CONTROLUNIT, "initialisierung", "", "");
+  INP1apiResultInt(errorFlag, queryInt, "DONE", 1);
+}
+
+ECUINFO() {
+  bool errorFlag;
+  string ECU, origin, author, comment, package, language, revision;
+
+  INPAapiJob(CONTROLUNIT, "INFO", "", "");
+  INP1apiResultText(errorFlag, ECU, "ECU", 1, "");
+  INP1apiResultText(errorFlag, origin, "ORIGIN", 1, "");
+  INP1apiResultText(errorFlag, revision, "REVISION", 1, "");
+  INP1apiResultText(errorFlag, author, "AUTHOR", 1, "");
+  INP1apiResultText(errorFlag, comment, "COMMENT", 1, "");
+  INP1apiResultText(errorFlag, package, "PACKAGE", 1, "");
+  INP1apiResultText(errorFlag, language, "SPRACHE", 1, "");
+
+  ftextout(TITLE + " INFO", 1, 25, 1, 3);
+  ftextout("ECU: " + ECU, 3, 10, 1, 0);
+  ftextout("Origin: " + origin, 5, 10, 1, 0);
+  ftextout("Revision: " + revision, 7, 10, 1, 0);
+  ftextout("Author: " + author, 9, 10, 1, 0);
+  ftextout("Comment: " + comment, 11, 10, 1, 0);
+  ftextout("Package: " + package, 13, 10, 1, 0);
+}
+
+
+//**********************************************************************
+//*
+//* Screens
+//*
+//**********************************************************************
+
+// MAIN SCREEN
+SCREEN s_main ()
+{
+  ftextout("N42 Custom Stats",1,25,1,3);
+}
+
+
+//Designed to be more performant for faster polling rate
+SCREEN s_perf() {
+  real load, throttle, spark, fuel1, fuel2, rpm_target, knock_retard, ambient_temp, spark_correction;
+  bool errorFlag;
+  int full_load;
+  string s;
+
+  //"LOAD,THROTTLE,SPARK,INJECTION BANK1,INJECTION BANK2,RPM,FULL LOAD,KNOCK RETARD,AMBENT TEMP,SPARK CORRECTION"
+  INPAapiJob(CONTROLUNIT, "STATUS_FASTA2", "","");
+
+  //Write previous loop data while ECU processes
+  LogWrite();
+
+  //Extract ALL FASTA2 results immediately
+  INP1apiResultReal(errorFlag, load, "STAT_RL_WERT", 1); //Load
+  INP1apiResultReal(errorFlag, throttle, "STAT_WPED_WERT", 1); //Throttle
+  INP1apiResultReal(errorFlag, spark, "STAT_ZWIST_WERT", 1); //Spark advance
+  INP1apiResultReal(errorFlag, fuel1, "STAT_TE_WERT", 1); //Injection bank1
+  INP1apiResultReal(errorFlag, fuel2, "STAT_TE2_WERT", 1); //Injection bank2
+  INP1apiResultReal(errorFlag, rpm_target, "STAT_NSOLFASTA_WERT", 1); //target RPM
+
+  INPAapiJob(CONTROLUNIT, "STATUS_FASTA3", "","");
+
+  //Process FASTA2 reponses while ECU processes
+  LogRealP(load, "Load: ", 5);
+  LogRealP(throttle, "Throttle: ",  6);
+  LogRealP(spark, "Spark: ", 7);
+  LogRealP(fuel1, "Injector Bank1: ", 8);
+  LogRealP(fuel2, "Injector Bank2: ",  9);
+  LogRealP(rpm_target, "RPM: ", 10);
+
+  //Extract ALL FASTA3 results
+  INP1apiResultInt(errorFlag, full_load, "STAT_FS_EIN", 1); //Full load 0/1
+  INP1apiResultReal(errorFlag, knock_retard, "STAT_DWKR_WERT", 1); //Knock retard
+  INP1apiResultReal(errorFlag, ambient_temp, "STAT_TUMG_WERT", 1); //Ambient temp
+  INP1apiResultReal(errorFlag, spark_correction, "STAT_DZWS_WERT", 1); //Spark correction
+
+  //Process final values to log
+  LogInt(full_load);
+  LogRealP(knock_retard, "Knock Retard: ", 11);
+  LogRealP(ambient_temp, "Ambient Temp: ", 12);
+  LogRealP(spark_correction, "Spark correction: ",  13);
+}
+
+SCREEN s_fuelling() {
+  bool errorFlag;
+  real int1, int2, add1, add2, mul1, mul2;
+
+  string s, s2;
+
+  INPAapiJob(CONTROLUNIT, "STATUS_INT", "","");
+  INP1apiResultReal(errorFlag, int1, "STAT_INT_WERT", 1); //Short
+
+  INPAapiJob(CONTROLUNIT, "STATUS_INT2", "","");
+  INP1apiResultReal(errorFlag, int2, "STAT_INT2_WERT", 1); //Short bank 2
+
+  INPAapiJob(CONTROLUNIT, "STATUS_ADD", "","");
+  INP1apiResultReal(errorFlag, add1, "STAT_ADD_WERT", 1); //Mid bank 1
+
+  INPAapiJob(CONTROLUNIT, "STATUS_ADD2", "","");
+  INP1apiResultReal(errorFlag, add1, "STAT_ADD2_WERT", 1); //Mid bank 2
+
+  INPAapiJob(CONTROLUNIT, "STATUS_MUL", "","");
+  INP1apiResultReal(errorFlag, mul1, "STAT_MUL_WERT", 1); //Long bank 1
+
+  INPAapiJob(CONTROLUNIT, "STATUS_MUL2", "","");
+  INP1apiResultReal(errorFlag, mul2, "STAT_MUL2_WERT", 1); //Long bank 2
+
+  ftextout(TITLE + " Fuelling", 1, 25, 1, 3);
+  ftextout("Bank 1                                                      Bank2", 5, 15, 1, 1);
+
+  realtostring(int1, "", s);
+  realtostring(int2, "", s2);
+  ftextout("INT  (short):  " + s + "                                                    " + s2 , 9, 0, 1, 1);
+
+  realtostring(add1, "", s);
+  realtostring(add2, "", s2);
+  ftextout("ADD (mid):   " + s + "                                                    " + s2 , 12, 0, 1, 1);
+
+  realtostring(mul1, "", s);
+  realtostring(mul2, "", s2);
+  ftextout("MUL (long):  " + s + "                                                    " + s2 , 15, 0, 1, 1);
+
+}
+
+// Menu selection logic
+MENU m_main()
+{
+  INIT{
+    setmenutitle( "Selection Menu");
+  }
+
+  ITEM( 1 , "Info"){
+    ECUINIT();
+    viewclose();
+    fileclose();
+    setscreen(s_info,FALSE);
+  }
+
+  ITEM(2, "Performance Logging"){
+    viewclose();
+    ECUINIT();
+    LOGFORMAT="LOAD,THROTTLE,SPARK,INJECTION BANK1,INJECTION BANK2,RPM,FULL LOAD,KNOCK RETARD,AMBENT TEMP,SPARK CORRECTION";
+    fileclose();
+    LogOpen(LOGNAME);
+    setscreen(s_perf,TRUE);
+  }
+
+  ITEM(3, "Fuelling/Lambda"){
+    viewclose();
+    fileclose();
+    ECUINIT();
+    setscreen(s_fuelling,TRUE);
+  }
+
+  ITEM(10 , "End"){
+    viewclose();
+    fileclose();
+    exit();
+  }
+}
+
+inpainit()
+{
+    //Boilerplate
+    INPAapiInit();
+
+    settitle(TITLE);
+    setmenu(m_main);
+    setscreen(s_main,TRUE);
+}
+
+// **************************
+// *** Infoscreen         ***
+// **************************
+SCREEN s_info ()
+{
+  ftextout("Information",1,0,1,0);
+  ECUINFO();
+}
+
+inpaexit()
+{
+  INPAapiEnd();
+}
