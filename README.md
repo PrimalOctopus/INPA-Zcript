@@ -23,7 +23,7 @@ Please note INPA_Crawler may return multiple files in which case I recommend man
 Find the jobs you want to run in the newly created file 
 >C:\EDIABAS\Bin\ecu-name.biv
 _______________________________________________________
-Consult "C:\EC-APPS\INPA\DOKU" for documentation on how to write INPA script.\
+Consult "C:\EC-APPS\INPA\DOKU" for documentation on how to write INPA script.
 
 Write your script and then compile it using either.
 
