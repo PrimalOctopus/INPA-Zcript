@@ -9,7 +9,7 @@ ECU:    Contains scripts for logging/monitoring for various engines/DME's.
 ________________________________________________________
 ## How to use:
 
-Use INPA CRAWLER to find your ECU file.\
+Use [INPA CRAWLER](\INPA CRAWLER\INPA-Crawler.py) to find your ECU file.\
 Edit the last line of INPA-Crawler.py to include your search term, for example:\
 >print(Crawl_ECU("N42"))
 
@@ -31,4 +31,4 @@ Write your script and then compile it using either.
 
 OR
 
-[VSCODE project config](\.vscode)
+[VSCODE](\.vscode) project config.
